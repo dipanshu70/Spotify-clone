@@ -270,8 +270,6 @@
 
 
 // thissssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssssss
-
-
 console.log("jvhggv");
 let currentsong = new Audio();
 let songs;
@@ -301,19 +299,26 @@ async function getsongs(folder) {
     for (let i = 0; i < response.length; i++) {
         const element = response[i];
         if (element.name.endsWith(".mp3")) {
-            songs.push(element.download_url);
+            // Use raw.githubusercontent.com for direct playable URL
+            let songUrl = `https://raw.githubusercontent.com/dipanshu70/Spotify-clone/main/songs/${currfolder}/${element.name}`;
+            songs.push(songUrl);
         }
     }
+    console.log("Songs loaded:", songs);
     return songs;
 }
 
 
 
 const playmusic = (track, pause = false) => {
+    console.log("Playing track:", track);
     currentsong.src = track;
+    console.log("Audio src set to:", currentsong.src);
 
     if (!pause) {
-        currentsong.play();
+        currentsong.play().catch(error => {
+            console.error("Audio play error:", error);
+        });
         play.src = "pause.svg";
     }
 
@@ -387,9 +392,6 @@ async function displayAlbums() {
 
 
 
-
-
-
 async function main() {
     songs = await getsongs("shubh");
     
@@ -401,7 +403,6 @@ async function main() {
     updatePlaylistUI(songs);
 
     // Attach an event listener to play, next and previous
-    // let playbtn = document.getElementById("#play");
     play.addEventListener("click", () => {
         if (currentsong.paused) {
             currentsong.play();
@@ -411,16 +412,14 @@ async function main() {
             currentsong.pause();
             play.src = "play.svg";
         }
-    }
-    )
+    })
+
     // Listen for timeupdate event
     currentsong.addEventListener("timeupdate", () => {
-        // console.log(currentsong.currentTime, currentsong.duration);
         document.querySelector(".songtime").innerHTML = `${secondsToMinutesSeconds(currentsong.currentTime)}
 /${secondsToMinutesSeconds(currentsong.duration)}`;
         document.querySelector(".circle").style.left = (currentsong.currentTime / currentsong.duration * 100) + "%";
     })
-
 
     // Add an event listener to seekbar
     document.querySelector(".seekbar").addEventListener("click", e => {
@@ -432,55 +431,71 @@ async function main() {
     //hamburger
     document.querySelector(".hamburger").addEventListener("click", () => {
         document.querySelector(".left").style.left = "0";
-    }
-    );
+    });
+
     //closing
     document.querySelector(".close").addEventListener("click", () => {
         document.querySelector(".left").style.left = "-130%";
-    }
-    )
+    })
+
     //previous button
     previous.addEventListener("click", () => {
-
-        let track = decodeURI(currentsong.src.split("/").slice(-1)[0]);
-        // const index = songs.indexOf(currentsong.src.split("/").slice(-1)[0]);
-        const decodedsongs = songs.map((song) => {
-            const decoded = decodeURI(song);
-            return decoded.split("\\").slice(-1)[0];
-
-        })
-
-        const index = decodedsongs.indexOf(track);
-        // console.log(songs,index);
-        if ((index - 1) >= 0) {
+        console.log("=== PREVIOUS CLICKED ===");
+        console.log("Current song src:", currentsong.src);
+        console.log("Songs array:", songs);
+        
+        // Extract filename and DECODE it (handle %20 for spaces, etc)
+        let currentFilename = decodeURIComponent(currentsong.src.split("/").pop());
+        console.log("Current filename (decoded):", currentFilename);
+        
+        // Find the index by comparing filenames
+        const index = songs.findIndex(song => {
+            let songFilename = decodeURIComponent(song.split("/").pop());
+            console.log("Comparing:", currentFilename, "===", songFilename, "?", currentFilename === songFilename);
+            return songFilename === currentFilename;
+        });
+        
+        console.log("Found index:", index);
+        
+        if (index > 0) {
+            console.log("Playing previous song at index:", index - 1);
             playmusic(songs[index - 1]);
+        } else {
+            console.log("Already at first song or song not found");
         }
-    }
-    )
+    })
+
     //next button
     next.addEventListener("click", () => {
-        let track = decodeURI(currentsong.src.split("/").slice(-1)[0]);
-        // const index = songs.indexOf(currentsong.src.split("/").slice(-1)[0]);
-        const decodedsongs = songs.map((song) => {
-            const decoded = decodeURI(song);
-            return decoded.split("\\").slice(-1)[0];
-
-        })
-
-        const index = decodedsongs.indexOf(track);
-        // console.log(songs,index);
-        if ((index + 1) < songs.length) {
+        console.log("=== NEXT CLICKED ===");
+        console.log("Current song src:", currentsong.src);
+        console.log("Songs array:", songs);
+        
+        // Extract filename and DECODE it (handle %20 for spaces, etc)
+        let currentFilename = decodeURIComponent(currentsong.src.split("/").pop());
+        console.log("Current filename (decoded):", currentFilename);
+        
+        // Find the index by comparing filenames
+        const index = songs.findIndex(song => {
+            let songFilename = decodeURIComponent(song.split("/").pop());
+            console.log("Comparing:", currentFilename, "===", songFilename, "?", currentFilename === songFilename);
+            return songFilename === currentFilename;
+        });
+        
+        console.log("Found index:", index);
+        
+        if (index < songs.length - 1) {
+            console.log("Playing next song at index:", index + 1);
             playmusic(songs[index + 1]);
+        } else {
+            console.log("Already at last song or song not found");
         }
     })
 
     //volume button
     document.querySelector(".range").getElementsByTagName("input")[0].addEventListener("change", (e) => {
-        // console.log(e);
         currentsong.volume = parseInt(e.target.value) / 100;
-
     })
-
 
     // Load the playlist whenever card is clicked
     Array.from(document.getElementsByClassName("card")).forEach(e => {
@@ -492,22 +507,20 @@ async function main() {
 
         })
     })
+
     // Add event listener to mute the track
     document.querySelector(".volume>img").addEventListener("click", e => {
         if (e.target.src.includes("volume.svg")) {
-            e.target.src=e.target.src.replace("volume.svg","mute.svg");
+            e.target.src = e.target.src.replace("volume.svg", "mute.svg");
             currentsong.volume = 0;
-            document.querySelector(".range").getElementsByTagName("input")[0].value=0;
+            document.querySelector(".range").getElementsByTagName("input")[0].value = 0;
         }
         else {
-            e.target.src=e.target.src.replace("mute.svg","volume.svg");
-            document.querySelector(".range").getElementsByTagName("input")[0].value=10;
-
-                currentsong.volume = .10;
-            }
-        })
-
-    }
-
+            e.target.src = e.target.src.replace("mute.svg", "volume.svg");
+            document.querySelector(".range").getElementsByTagName("input")[0].value = 10;
+            currentsong.volume = .10;
+        }
+    })
+}
 
 main();
